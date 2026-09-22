@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/JevNet.Extensions.DependencyInjection/JevNet.Extensions.DependencyInjection.csproj" />
     <Project Path="src/JevNet/JevNet.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/JevNet.Extensions.DependencyInjection.Tests/JevNet.Extensions.DependencyInjection.Tests.csproj" />
     <Project Path="tests/JevNet.Tests/JevNet.Tests.csproj" />
   </Folder>
 </Solution>

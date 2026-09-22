@@ -55,10 +55,20 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
 
     /// <summary>Creates a client over a caller-owned <see cref="HttpClient"/>.</summary>
     public TypeSafeClient(HttpClient httpClient, TypeSafeClientOptions? options = null)
+        : this(httpClient, options, disposeHttpClient: false)
+    {
+    }
+
+    /// <summary>Creates a client and explicitly controls ownership of the supplied HTTP client.</summary>
+    public TypeSafeClient(
+        HttpClient httpClient,
+        TypeSafeClientOptions? options,
+        bool disposeHttpClient)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         _settings = TypeSafeClientSettings.Resolve(options ?? new TypeSafeClientOptions());
         _httpClient = httpClient;
+        _ownsHttpClient = disposeHttpClient;
         Models = new ModelsResource(this);
     }
 
