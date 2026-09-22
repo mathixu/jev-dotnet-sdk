@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-22
+
 ### Added
 
 - Typed Noul, Choice, and Score questions and answers.
@@ -13,3 +15,6 @@ All notable changes to this project are documented in this file. The format foll
 - Available-model listing.
 - Optional `Microsoft.Extensions.DependencyInjection` integration.
 - Offline parity coverage against the official JavaScript and Python SDKs.
+
+[Unreleased]: https://github.com/mathixu/jev-dotnet-sdk/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mathixu/jev-dotnet-sdk/releases/tag/v0.1.0
