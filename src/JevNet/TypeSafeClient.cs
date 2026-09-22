@@ -86,21 +86,88 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
             throw new ArgumentOutOfRangeException(nameof(options), "Timeout must be positive and finite.");
         }
 
-        using var message = CreateRequest(request.WithModel(request.Model ?? _settings.DefaultModel), options);
-        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutSource.CancelAfter(timeout);
-        using var response = await _httpClient.SendAsync(
-            message,
-            HttpCompletionOption.ResponseHeadersRead,
-            timeoutSource.Token).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync(timeoutSource.Token).ConfigureAwait(false);
-        var result = JevJson.Deserialize<SystemOneResponse>(json)
-            ?? throw new JsonException("The API returned an empty response.");
-        var requestId = response.Headers.TryGetValues("x-typesafe-request-id", out var values)
-            ? values.FirstOrDefault()
-            : null;
-        return new SystemOneResponse(result.Model, result.Answers, result.Usage, requestId);
+        var retry = (options?.Retry ?? _settings.Retry).Validate();
+        var payload = Encoding.UTF8.GetBytes(JevJson.Serialize(
+            request.WithModel(request.Model ?? _settings.DefaultModel)));
+        var endpoint = $"POST {_settings.BaseUrl.AbsoluteUri.TrimEnd('/')}/v1/systemone";
+
+        for (var attempt = 0; ; attempt++)
+        {
+            using var message = CreateRequest(payload, options, attempt);
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutSource.CancelAfter(timeout);
+            try
+            {
+                using var response = await _httpClient.SendAsync(
+                    message,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    timeoutSource.Token).ConfigureAwait(false);
+                var body = await response.Content.ReadAsStringAsync(timeoutSource.Token)
+                    .ConfigureAwait(false);
+                var headers = SnapshotHeaders(response);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    if (attempt < retry.MaxRetries && retry.StatusCodes.Contains((int)response.StatusCode))
+                    {
+                        await DelayBeforeRetryAsync(retry, attempt, headers, cancellationToken)
+                            .ConfigureAwait(false);
+                        continue;
+                    }
+
+                    throw TypeSafeApiExceptionFactory.Create(
+                        response.StatusCode,
+                        body,
+                        headers,
+                        endpoint);
+                }
+
+                SystemOneResponse result;
+                try
+                {
+                    result = JevJson.Deserialize<SystemOneResponse>(body)
+                        ?? throw new JsonException("The API returned an empty response.");
+                }
+                catch (JsonException error)
+                {
+                    throw new TypeSafeResponseValidationException(
+                        response.StatusCode,
+                        body,
+                        headers,
+                        endpoint,
+                        error);
+                }
+
+                var requestId = headers.TryGetValue("x-typesafe-request-id", out var value)
+                    ? value
+                    : null;
+                return new SystemOneResponse(result.Model, result.Answers, result.Usage, requestId);
+            }
+            catch (OperationCanceledException error) when (!cancellationToken.IsCancellationRequested)
+            {
+                var timeoutError = new TypeSafeTimeoutException(timeout, error);
+                if (attempt >= retry.MaxRetries || !retry.RetryTimeouts)
+                {
+                    throw timeoutError;
+                }
+
+                await DelayBeforeRetryAsync(retry, attempt, null, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (HttpRequestException error)
+            {
+                var connectionError = new TypeSafeConnectionException(
+                    $"Connection failed while calling {endpoint}.",
+                    error);
+                if (attempt >= retry.MaxRetries || !retry.RetryConnectionErrors)
+                {
+                    throw connectionError;
+                }
+
+                await DelayBeforeRetryAsync(retry, attempt, null, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
     }
 
     /// <summary>Disposes the internally created HTTP client, if any.</summary>
@@ -118,7 +185,7 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
         }
     }
 
-    private HttpRequestMessage CreateRequest(SystemOneRequest request, RequestOptions? options)
+    private HttpRequestMessage CreateRequest(byte[] payload, RequestOptions? options, int attempt)
     {
         var uri = new Uri($"{_settings.BaseUrl.AbsoluteUri.TrimEnd('/')}/v1/systemone");
         var message = new HttpRequestMessage(HttpMethod.Post, uri);
@@ -141,10 +208,71 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
         message.Headers.TryAddWithoutValidation("User-Agent", $"JevNet/{Version}");
         message.Headers.TryAddWithoutValidation("X-TypeSafe-SDK", $"JevNet/{Version}");
         message.Headers.TryAddWithoutValidation("X-TypeSafe-Runtime", RuntimeInformation.FrameworkDescription);
+        if (attempt > 0)
+        {
+            message.Headers.TryAddWithoutValidation("X-TypeSafe-Retry-Count", attempt.ToString(
+                System.Globalization.CultureInfo.InvariantCulture));
+        }
 
-        var content = new ByteArrayContent(Encoding.UTF8.GetBytes(JevJson.Serialize(request)));
+        var content = new ByteArrayContent(payload);
         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         message.Content = content;
         return message;
+    }
+
+    private static Dictionary<string, string> SnapshotHeaders(HttpResponseMessage response)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var header in response.Headers)
+        {
+            headers[header.Key] = string.Join(",", header.Value);
+        }
+
+        foreach (var header in response.Content.Headers)
+        {
+            headers[header.Key] = string.Join(",", header.Value);
+        }
+
+        return headers;
+    }
+
+    private static async Task DelayBeforeRetryAsync(
+        RetryPolicy policy,
+        int attempt,
+        IReadOnlyDictionary<string, string>? headers,
+        CancellationToken cancellationToken)
+    {
+        TimeSpan? serverDelay = null;
+        if (policy.RespectRetryAfter && headers is not null)
+        {
+            var parsed = RetryAfterParser.Parse(headers);
+            if (parsed <= policy.MaximumRetryAfter)
+            {
+                serverDelay = parsed;
+            }
+        }
+
+        var delay = serverDelay ?? Backoff(policy, attempt);
+        if (delay > TimeSpan.Zero)
+        {
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static TimeSpan Backoff(RetryPolicy policy, int attempt)
+    {
+        var maximumMilliseconds = policy.BackoffMaximum.TotalMilliseconds;
+        var milliseconds = policy.BackoffInitial.TotalMilliseconds * Math.Pow(2, attempt);
+        if (!double.IsFinite(milliseconds) || milliseconds > maximumMilliseconds)
+        {
+            milliseconds = maximumMilliseconds;
+        }
+
+        if (policy.BackoffJitter > 0 && milliseconds > 0)
+        {
+            milliseconds *= 1 - (Random.Shared.NextDouble() * policy.BackoffJitter);
+        }
+
+        return TimeSpan.FromMilliseconds(milliseconds);
     }
 }

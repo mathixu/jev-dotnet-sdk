@@ -17,6 +17,9 @@ public sealed class TypeSafeClientOptions
 
     /// <summary>Headers included in every request. Authentication and content headers are protected.</summary>
     public IReadOnlyDictionary<string, string>? DefaultHeaders { get; init; }
+
+    /// <summary>Retry behavior. Defaults to two retries for transient failures.</summary>
+    public RetryPolicy Retry { get; init; } = RetryPolicy.Default;
 }
 
 /// <summary>Options that apply to one API call.</summary>
@@ -27,6 +30,9 @@ public sealed class RequestOptions
 
     /// <summary>Additional headers. Per-call values replace client defaults case-insensitively.</summary>
     public IReadOnlyDictionary<string, string>? Headers { get; init; }
+
+    /// <summary>Overrides the client's retry policy for this call.</summary>
+    public RetryPolicy? Retry { get; init; }
 }
 
 internal sealed class TypeSafeClientSettings
@@ -36,13 +42,15 @@ internal sealed class TypeSafeClientSettings
         Uri baseUrl,
         string defaultModel,
         TimeSpan timeout,
-        IReadOnlyDictionary<string, string> defaultHeaders)
+        IReadOnlyDictionary<string, string> defaultHeaders,
+        RetryPolicy retry)
     {
         ApiKey = apiKey;
         BaseUrl = baseUrl;
         DefaultModel = defaultModel;
         Timeout = timeout;
         DefaultHeaders = defaultHeaders;
+        Retry = retry;
     }
 
     internal string ApiKey { get; }
@@ -54,6 +62,8 @@ internal sealed class TypeSafeClientSettings
     internal TimeSpan Timeout { get; }
 
     internal IReadOnlyDictionary<string, string> DefaultHeaders { get; }
+
+    internal RetryPolicy Retry { get; }
 
     internal static TypeSafeClientSettings Resolve(TypeSafeClientOptions options)
     {
@@ -92,7 +102,14 @@ internal sealed class TypeSafeClientSettings
             }
         }
 
-        return new TypeSafeClientSettings(apiKey, baseUrl, model, options.Timeout, headers);
+        if (!string.IsNullOrEmpty(baseUrl.UserInfo))
+        {
+            throw new TypeSafeConfigurationException("BaseUrl must not contain credentials.");
+        }
+
+        var retry = (options.Retry ?? throw new TypeSafeConfigurationException("Retry cannot be null."))
+            .Validate();
+        return new TypeSafeClientSettings(apiKey, baseUrl, model, options.Timeout, headers, retry);
     }
 
     private static string ResolveApiKey(string? explicitValue)

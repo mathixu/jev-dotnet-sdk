@@ -5,13 +5,14 @@ namespace Jev.Tests;
 
 internal sealed class RecordingHandler : HttpMessageHandler
 {
-    private readonly ConcurrentQueue<Func<HttpRequestMessage, HttpResponseMessage>> _responses = new();
+    private readonly ConcurrentQueue<
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>> _responses = new();
 
     public List<RecordedRequest> Requests { get; } = [];
 
     public void Enqueue(HttpStatusCode statusCode, string body, params (string Name, string Value)[] headers)
     {
-        _responses.Enqueue(_ =>
+        _responses.Enqueue((_, _) =>
         {
             var response = new HttpResponseMessage(statusCode)
             {
@@ -22,11 +23,15 @@ internal sealed class RecordingHandler : HttpMessageHandler
                 response.Headers.TryAddWithoutValidation(name, value);
             }
 
-            return response;
+            return Task.FromResult(response);
         });
     }
 
     public void Enqueue(Func<HttpRequestMessage, HttpResponseMessage> response) =>
+        _responses.Enqueue((request, _) => Task.FromResult(response(request)));
+
+    public void EnqueueAsync(
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> response) =>
         _responses.Enqueue(response);
 
     protected override async Task<HttpResponseMessage> SendAsync(
@@ -56,7 +61,7 @@ internal sealed class RecordingHandler : HttpMessageHandler
             throw new InvalidOperationException("No HTTP response was queued for this request.");
         }
 
-        return response(request);
+        return await response(request, cancellationToken);
     }
 }
 
