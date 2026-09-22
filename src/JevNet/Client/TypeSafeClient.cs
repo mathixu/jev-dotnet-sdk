@@ -73,6 +73,15 @@ public sealed partial class TypeSafeClient : ITypeSafeClient, IDisposable
         CancellationToken cancellationToken = default) =>
         SystemOneAsync(new SystemOneRequest(state, questions, model), options, cancellationToken);
 
+    /// <summary>Serializes structured .NET state and evaluates named questions against it.</summary>
+    public Task<SystemOneResponse> SystemOneAsync<TState>(
+        TState state,
+        IReadOnlyDictionary<string, Question> questions,
+        string? model = null,
+        RequestOptions? options = null,
+        CancellationToken cancellationToken = default) =>
+        SystemOneAsync(JevValue.From(state), questions, model, options, cancellationToken);
+
     /// <inheritdoc />
     public async Task<SystemOneResponse> SystemOneAsync(
         SystemOneRequest request,

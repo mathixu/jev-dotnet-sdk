@@ -33,6 +33,20 @@ public sealed class QuestionTests
     }
 
     [Fact]
+    public void Noul_omits_an_outcome_without_a_description()
+    {
+        var question = Question.Noul(
+            "Is this message spam?",
+            new NoulCriteria(@true: "Unsolicited advertising"));
+
+        var criteria = JsonDocument.Parse(JevJson.Serialize(question))
+            .RootElement.GetProperty("criteria");
+
+        Assert.True(criteria.TryGetProperty("true", out _));
+        Assert.False(criteria.TryGetProperty("false", out _));
+    }
+
+    [Fact]
     public void Choice_preserves_labels_and_nullable_descriptions()
     {
         var question = Question.Choice(

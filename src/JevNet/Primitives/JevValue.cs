@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Jev;
 
@@ -20,6 +21,13 @@ public sealed class JevValue
     {
         var element = JsonSerializer.SerializeToElement(value, options ?? JevJson.SerializerOptions);
         return new JevValue(element);
+    }
+
+    /// <summary>Creates a value with source-generated JSON metadata for trim-safe applications.</summary>
+    public static JevValue From<T>(T value, JsonTypeInfo<T> typeInfo)
+    {
+        ArgumentNullException.ThrowIfNull(typeInfo);
+        return new JevValue(JsonSerializer.SerializeToElement(value, typeInfo));
     }
 
     /// <summary>Creates a value from one complete JSON value.</summary>

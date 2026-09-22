@@ -21,10 +21,18 @@ internal sealed class QuestionJsonConverter : JsonConverter<Question>
             case NoulQuestion { Criteria: not null } noul:
                 writer.WritePropertyName("criteria");
                 writer.WriteStartObject();
-                writer.WritePropertyName("true");
-                WriteValue(writer, noul.Criteria.True);
-                writer.WritePropertyName("false");
-                WriteValue(writer, noul.Criteria.False);
+                if (noul.Criteria.True is not null)
+                {
+                    writer.WritePropertyName("true");
+                    WriteValue(writer, noul.Criteria.True);
+                }
+
+                if (noul.Criteria.False is not null)
+                {
+                    writer.WritePropertyName("false");
+                    WriteValue(writer, noul.Criteria.False);
+                }
+
                 writer.WriteEndObject();
                 break;
             case ChoiceQuestion choice:

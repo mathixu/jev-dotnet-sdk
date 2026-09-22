@@ -99,10 +99,8 @@ public sealed class ClientTests
         handler.Enqueue(HttpStatusCode.OK, SuccessBody);
         using var httpClient = new HttpClient(handler);
         using var client = new TypeSafeClient(httpClient, new TypeSafeClientOptions { ApiKey = "test-key" });
-        var state = JevValue.From(new { ticket = new { id = 42, text = "Help" } });
-
         await client.SystemOneAsync(
-            state,
+            new { ticket = new { id = 42, text = "Help" } },
             new Dictionary<string, Question> { ["urgent"] = Question.Noul() });
 
         var body = JsonDocument.Parse(Assert.Single(handler.Requests).Body!).RootElement;
