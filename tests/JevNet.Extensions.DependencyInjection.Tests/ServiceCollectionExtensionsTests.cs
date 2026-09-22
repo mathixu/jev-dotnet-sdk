@@ -22,9 +22,9 @@ public sealed class ServiceCollectionExtensionsTests
 
         var abstraction = provider.GetRequiredService<ITypeSafeClient>();
         var implementation = provider.GetRequiredService<TypeSafeClient>();
-        var response = await abstraction.SystemOneAsync(new SystemOneRequest(
+        var response = await abstraction.SystemOneAsync(
             "state",
-            new Dictionary<string, Question> { ["q"] = Question.Noul() }));
+            new Dictionary<string, Question> { ["q"] = Question.Noul() });
 
         Assert.Same(implementation, abstraction);
         Assert.Equal(0.7, response.GetNoul("q").Noul);
