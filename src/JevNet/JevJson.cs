@@ -10,9 +10,12 @@ public static class JevJson
     internal static JsonSerializerOptions SerializerOptions => DefaultOptions;
 
     /// <summary>Serializes a value using the SDK's wire-format settings.</summary>
-    public static string Serialize<T>(T value) => value is Question question
-        ? JsonSerializer.Serialize<Question>(question, DefaultOptions)
-        : JsonSerializer.Serialize(value, DefaultOptions);
+    public static string Serialize<T>(T value) => value switch
+    {
+        Question question => JsonSerializer.Serialize<Question>(question, DefaultOptions),
+        Answer answer => JsonSerializer.Serialize<Answer>(answer, DefaultOptions),
+        _ => JsonSerializer.Serialize(value, DefaultOptions),
+    };
 
     /// <summary>Deserializes a value using the SDK's wire-format settings.</summary>
     public static T? Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json, DefaultOptions);
