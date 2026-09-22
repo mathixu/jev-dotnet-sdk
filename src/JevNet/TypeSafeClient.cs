@@ -8,6 +8,9 @@ namespace Jev;
 /// <summary>Client contract for TypeSafe AI's System One API.</summary>
 public interface ITypeSafeClient
 {
+    /// <summary>Access to available-model operations.</summary>
+    IModelsResource Models { get; }
+
     /// <summary>Evaluates named questions against shared state.</summary>
     Task<SystemOneResponse> SystemOneAsync(
         SystemOneRequest request,
@@ -47,6 +50,7 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
         _settings = TypeSafeClientSettings.Resolve(options ?? new TypeSafeClientOptions());
         _httpClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         _ownsHttpClient = true;
+        Models = new ModelsResource(this);
     }
 
     /// <summary>Creates a client over a caller-owned <see cref="HttpClient"/>.</summary>
@@ -55,6 +59,7 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
         ArgumentNullException.ThrowIfNull(httpClient);
         _settings = TypeSafeClientSettings.Resolve(options ?? new TypeSafeClientOptions());
         _httpClient = httpClient;
+        Models = new ModelsResource(this);
     }
 
     /// <summary>The resolved API root.</summary>
@@ -62,6 +67,9 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
 
     /// <summary>The resolved default model.</summary>
     public string DefaultModel => _settings.DefaultModel;
+
+    /// <summary>Access to available-model operations.</summary>
+    public IModelsResource Models { get; }
 
     /// <summary>Evaluates named questions against shared state.</summary>
     public Task<SystemOneResponse> SystemOneAsync(
@@ -86,14 +94,47 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
             throw new ArgumentOutOfRangeException(nameof(options), "Timeout must be positive and finite.");
         }
 
-        var retry = (options?.Retry ?? _settings.Retry).Validate();
         var payload = Encoding.UTF8.GetBytes(JevJson.Serialize(
             request.WithModel(request.Model ?? _settings.DefaultModel)));
-        var endpoint = $"POST {_settings.BaseUrl.AbsoluteUri.TrimEnd('/')}/v1/systemone";
+        return await SendAsync(
+            HttpMethod.Post,
+            "/v1/systemone",
+            payload,
+            options,
+            static (_, body, headers) =>
+            {
+                var result = JevJson.Deserialize<SystemOneResponse>(body)
+                    ?? throw new JsonException("The API returned an empty response.");
+                var requestId = headers.TryGetValue("x-typesafe-request-id", out var value)
+                    ? value
+                    : null;
+                return new SystemOneResponse(result.Model, result.Answers, result.Usage, requestId);
+            },
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    internal async Task<TResult> SendAsync<TResult>(
+        HttpMethod method,
+        string path,
+        byte[]? payload,
+        RequestOptions? options,
+        Func<System.Net.HttpStatusCode, string, Dictionary<string, string>, TResult> parse,
+        CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var timeout = options?.Timeout ?? _settings.Timeout;
+        if (timeout <= TimeSpan.Zero || timeout == Timeout.InfiniteTimeSpan)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Timeout must be positive and finite.");
+        }
+
+        var retry = (options?.Retry ?? _settings.Retry).Validate();
+        var requestUrl = $"{_settings.BaseUrl.AbsoluteUri.TrimEnd('/')}{path}";
+        var endpoint = $"{method.Method} {requestUrl}";
 
         for (var attempt = 0; ; attempt++)
         {
-            using var message = CreateRequest(payload, options, attempt);
+            using var message = CreateRequest(method, requestUrl, payload, options, attempt);
             using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutSource.CancelAfter(timeout);
             try
@@ -122,11 +163,9 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
                         endpoint);
                 }
 
-                SystemOneResponse result;
                 try
                 {
-                    result = JevJson.Deserialize<SystemOneResponse>(body)
-                        ?? throw new JsonException("The API returned an empty response.");
+                    return parse(response.StatusCode, body, headers);
                 }
                 catch (JsonException error)
                 {
@@ -138,10 +177,6 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
                         error);
                 }
 
-                var requestId = headers.TryGetValue("x-typesafe-request-id", out var value)
-                    ? value
-                    : null;
-                return new SystemOneResponse(result.Model, result.Answers, result.Usage, requestId);
             }
             catch (OperationCanceledException error) when (!cancellationToken.IsCancellationRequested)
             {
@@ -185,10 +220,14 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
         }
     }
 
-    private HttpRequestMessage CreateRequest(byte[] payload, RequestOptions? options, int attempt)
+    private HttpRequestMessage CreateRequest(
+        HttpMethod method,
+        string requestUrl,
+        byte[]? payload,
+        RequestOptions? options,
+        int attempt)
     {
-        var uri = new Uri($"{_settings.BaseUrl.AbsoluteUri.TrimEnd('/')}/v1/systemone");
-        var message = new HttpRequestMessage(HttpMethod.Post, uri);
+        var message = new HttpRequestMessage(method, requestUrl);
         var headers = new Dictionary<string, string>(_settings.DefaultHeaders, StringComparer.OrdinalIgnoreCase);
         if (options?.Headers is not null)
         {
@@ -214,9 +253,13 @@ public sealed class TypeSafeClient : ITypeSafeClient, IDisposable
                 System.Globalization.CultureInfo.InvariantCulture));
         }
 
-        var content = new ByteArrayContent(payload);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-        message.Content = content;
+        if (payload is not null)
+        {
+            var content = new ByteArrayContent(payload);
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            message.Content = content;
+        }
+
         return message;
     }
 
