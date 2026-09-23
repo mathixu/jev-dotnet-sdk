@@ -4,7 +4,7 @@
     <AssemblyName>JevNet</AssemblyName>
     <RootNamespace>Jev</RootNamespace>
     <PackageId>JevNet</PackageId>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.2.0</VersionPrefix>
     <Title>JevNet</Title>
     <Description>An idiomatic .NET SDK for Jev through TypeSafe AI and OpenRouter.</Description>
     <PackageTags>jev;typesafe-ai;openrouter;system-one;ai;sdk</PackageTags>
