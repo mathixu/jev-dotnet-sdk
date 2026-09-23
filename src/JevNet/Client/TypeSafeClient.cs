@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Jev;
 
-/// <summary>An asynchronous, thread-safe client for TypeSafe AI.</summary>
+/// <summary>An asynchronous, thread-safe client for Jev through TypeSafe AI or OpenRouter.</summary>
 public sealed partial class TypeSafeClient : ITypeSafeClient, IDisposable
 {
     /// <summary>The environment variable used for the API key.</summary>
@@ -15,11 +15,26 @@ public sealed partial class TypeSafeClient : ITypeSafeClient, IDisposable
     /// <summary>The environment variable used for the default model.</summary>
     public const string DefaultModelEnvironmentVariable = "TYPESAFE_DEFAULT_MODEL";
 
+    /// <summary>The environment variable used for an OpenRouter API key.</summary>
+    public const string OpenRouterApiKeyEnvironmentVariable = "OPENROUTER_API_KEY";
+
+    /// <summary>The environment variable used for an OpenRouter API root override.</summary>
+    public const string OpenRouterBaseUrlEnvironmentVariable = "OPENROUTER_BASE_URL";
+
+    /// <summary>The environment variable used for an OpenRouter model override.</summary>
+    public const string OpenRouterDefaultModelEnvironmentVariable = "OPENROUTER_DEFAULT_MODEL";
+
     /// <summary>The default TypeSafe API root.</summary>
     public const string DefaultBaseUrl = "https://api.typesafe.ai";
 
     /// <summary>The moving default Jev model alias.</summary>
     public const string DefaultModelName = "jev-latest";
+
+    /// <summary>The default OpenRouter API root.</summary>
+    public const string OpenRouterDefaultBaseUrl = "https://openrouter.ai";
+
+    /// <summary>The moving Jev model alias on OpenRouter.</summary>
+    public const string OpenRouterDefaultModelName = "~typesafe/jev-latest";
 
     private static readonly string Version =
         typeof(TypeSafeClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
@@ -58,6 +73,9 @@ public sealed partial class TypeSafeClient : ITypeSafeClient, IDisposable
     /// <summary>The resolved API root.</summary>
     public Uri BaseUrl => _settings.BaseUrl;
 
+    /// <summary>The selected Jev backend.</summary>
+    public JevProvider Provider => _settings.Provider;
+
     /// <summary>The resolved default model.</summary>
     public string DefaultModel => _settings.DefaultModel;
 
@@ -94,7 +112,7 @@ public sealed partial class TypeSafeClient : ITypeSafeClient, IDisposable
             request.WithModel(request.Model ?? _settings.DefaultModel)));
         return await SendAsync(
             HttpMethod.Post,
-            "/v1/systemone",
+            _settings.DecisionsPath,
             payload,
             options,
             static (_, body, headers) =>

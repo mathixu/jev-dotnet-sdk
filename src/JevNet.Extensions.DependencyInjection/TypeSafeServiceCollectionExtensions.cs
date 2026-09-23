@@ -8,7 +8,7 @@ public static class TypeSafeServiceCollectionExtensions
 {
     private const string HttpClientName = "JevNet";
 
-    /// <summary>Registers one thread-safe TypeSafe client backed by <see cref="IHttpClientFactory"/>.</summary>
+    /// <summary>Registers one thread-safe Jev client backed by <see cref="IHttpClientFactory"/>.</summary>
     public static IHttpClientBuilder AddTypeSafeClient(
         this IServiceCollection services,
         TypeSafeClientOptions options)
@@ -18,7 +18,7 @@ public static class TypeSafeServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers one thread-safe TypeSafe client, resolving its settings from the service provider.
+    /// Registers one thread-safe Jev client, resolving its settings from the service provider.
     /// </summary>
     public static IHttpClientBuilder AddTypeSafeClient(
         this IServiceCollection services,

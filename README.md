@@ -1,6 +1,6 @@
 # JevNet
 
-An idiomatic .NET client for [TypeSafe AI](https://typesafe.ai/) and its Jev System One model.
+An idiomatic .NET client for [TypeSafe AI](https://typesafe.ai/) and its Jev System One model, with first-class [OpenRouter](https://openrouter.ai/) support.
 
 JevNet turns text or structured application state into typed decisions: a probability (`Noul`), a selected label (`Choice`), or an expected score (`Score`). The core package targets .NET 8 or later and has no runtime package dependencies.
 
@@ -85,13 +85,13 @@ var value = JevValue.From(state, AppJsonContext.Default.TicketState);
 
 Explicit options win over environment variables, which win over SDK defaults.
 
-| Option | Environment variable | Default |
+| Option | TypeSafe resolution | OpenRouter resolution |
 | --- | --- | --- |
-| `ApiKey` | `TYPESAFE_API_KEY` | required |
-| `BaseUrl` | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` |
-| `DefaultModel` | `TYPESAFE_DEFAULT_MODEL` | `jev-latest` |
-| `Timeout` | — | 10 seconds per attempt |
-| `Retry` | — | 2 retries, 500–5000 ms backoff, 25% subtractive jitter |
+| `ApiKey` | `TYPESAFE_API_KEY`, required | `OPENROUTER_API_KEY`, required |
+| `BaseUrl` | `TYPESAFE_BASE_URL`, then `https://api.typesafe.ai` | `OPENROUTER_BASE_URL`, then `https://openrouter.ai` |
+| `DefaultModel` | `TYPESAFE_DEFAULT_MODEL`, then `jev-latest` | `OPENROUTER_DEFAULT_MODEL`, then `~typesafe/jev-latest` |
+| `Timeout` | 10 seconds per attempt | 10 seconds per attempt |
+| `Retry` | 2 retries with jitter | 2 retries with jitter |
 
 ```csharp
 using var client = new TypeSafeClient(new TypeSafeClientOptions
@@ -104,6 +104,25 @@ using var client = new TypeSafeClient(new TypeSafeClientOptions
 ```
 
 Pin a versioned model when application thresholds depend on stable behavior. The `jev-latest` alias can move.
+
+### OpenRouter
+
+Select OpenRouter in the same client options; no custom HTTP handler or URL rewriting is required:
+
+```csharp
+using var client = new TypeSafeClient(new TypeSafeClientOptions
+{
+    Provider = JevProvider.OpenRouter,
+    ApiKey = configuration["OpenRouter:ApiKey"], // or OPENROUTER_API_KEY
+    DefaultHeaders = new Dictionary<string, string>
+    {
+        ["HTTP-Referer"] = "https://example.com",
+        ["X-OpenRouter-Title"] = "Example application",
+    },
+});
+```
+
+The attribution headers are optional.
 
 ### Per-call settings
 

@@ -1,6 +1,6 @@
 namespace Jev;
 
-/// <summary>Client contract for TypeSafe AI's System One API.</summary>
+/// <summary>Client contract for Jev decisions through TypeSafe AI or OpenRouter.</summary>
 public interface ITypeSafeClient
 {
     /// <summary>Access to available-model operations.</summary>

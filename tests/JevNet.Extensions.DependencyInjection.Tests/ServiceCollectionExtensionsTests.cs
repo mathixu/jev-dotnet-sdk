@@ -45,6 +45,28 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<ITypeSafeClient>());
     }
 
+    [Fact]
+    public async Task AddTypeSafeClient_supports_OpenRouter()
+    {
+        var handler = new StubHandler();
+        var services = new ServiceCollection();
+        services.AddTypeSafeClient(new TypeSafeClientOptions
+        {
+            Provider = JevProvider.OpenRouter,
+            ApiKey = "openrouter-key",
+            Retry = RetryPolicy.NoRetries,
+        }).ConfigurePrimaryHttpMessageHandler(() => handler);
+        await using var provider = services.BuildServiceProvider();
+
+        var client = provider.GetRequiredService<TypeSafeClient>();
+        await client.SystemOneAsync(
+            "state",
+            new Dictionary<string, Question> { ["q"] = Question.Noul() });
+
+        Assert.Equal(JevProvider.OpenRouter, client.Provider);
+        Assert.Equal("https://openrouter.ai/api/alpha/decisions", handler.RequestUri?.AbsoluteUri);
+    }
+
     private sealed record ApiSettings(string ApiKey);
 
     private sealed class StubHandler : HttpMessageHandler

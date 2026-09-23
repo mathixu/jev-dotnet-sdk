@@ -3,13 +3,16 @@ namespace Jev;
 /// <summary>Construction-time settings for <see cref="TypeSafeClient"/>.</summary>
 public sealed class TypeSafeClientOptions
 {
-    /// <summary>API key. Falls back to <c>TYPESAFE_API_KEY</c>.</summary>
+    /// <summary>Backend used to execute Jev decisions.</summary>
+    public JevProvider Provider { get; init; } = JevProvider.TypeSafe;
+
+    /// <summary>API key. Falls back to the selected provider's environment variable.</summary>
     public string? ApiKey { get; init; }
 
-    /// <summary>API root. Falls back to <c>TYPESAFE_BASE_URL</c>.</summary>
+    /// <summary>API root. Falls back to the selected provider's environment variable and default.</summary>
     public string? BaseUrl { get; init; }
 
-    /// <summary>Default model. Falls back to <c>TYPESAFE_DEFAULT_MODEL</c>.</summary>
+    /// <summary>Default model. Falls back to the selected provider's environment variable and default.</summary>
     public string? DefaultModel { get; init; }
 
     /// <summary>Timeout for each HTTP attempt.</summary>
