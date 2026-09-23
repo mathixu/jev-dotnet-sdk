@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- First-class OpenRouter Decisions API support through `TypeSafeClientOptions.Provider`.
+
 ## [0.1.0] - 2026-09-22
 
 ### Added
