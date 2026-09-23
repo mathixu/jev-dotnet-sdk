@@ -4,7 +4,7 @@
     <AssemblyName>JevNet.Extensions.DependencyInjection</AssemblyName>
     <RootNamespace>Jev</RootNamespace>
     <PackageId>JevNet.Extensions.DependencyInjection</PackageId>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.2.0</VersionPrefix>
     <Title>JevNet dependency injection extensions</Title>
     <Description>Microsoft.Extensions.DependencyInjection integration for JevNet.</Description>
     <PackageTags>jev;typesafe-ai;dependency-injection;httpclient</PackageTags>
