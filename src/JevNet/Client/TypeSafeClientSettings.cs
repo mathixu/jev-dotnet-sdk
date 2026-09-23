@@ -3,26 +3,34 @@ namespace Jev;
 internal sealed class TypeSafeClientSettings
 {
     private TypeSafeClientSettings(
+        JevProvider provider,
         string apiKey,
         Uri baseUrl,
         string defaultModel,
+        string decisionsPath,
         TimeSpan timeout,
         IReadOnlyDictionary<string, string> defaultHeaders,
         RetryPolicy retry)
     {
+        Provider = provider;
         ApiKey = apiKey;
         BaseUrl = baseUrl;
         DefaultModel = defaultModel;
+        DecisionsPath = decisionsPath;
         Timeout = timeout;
         DefaultHeaders = defaultHeaders;
         Retry = retry;
     }
+
+    internal JevProvider Provider { get; }
 
     internal string ApiKey { get; }
 
     internal Uri BaseUrl { get; }
 
     internal string DefaultModel { get; }
+
+    internal string DecisionsPath { get; }
 
     internal TimeSpan Timeout { get; }
 
@@ -33,11 +41,12 @@ internal sealed class TypeSafeClientSettings
     internal static TypeSafeClientSettings Resolve(TypeSafeClientOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        var apiKey = ResolveApiKey(options.ApiKey);
+        var provider = ResolveProvider(options.Provider);
+        var apiKey = ResolveApiKey(options.ApiKey, provider.ApiKeyEnvironmentVariable);
         var baseUrlText = Resolve(
             options.BaseUrl,
-            TypeSafeClient.BaseUrlEnvironmentVariable,
-            TypeSafeClient.DefaultBaseUrl).TrimEnd('/');
+            provider.BaseUrlEnvironmentVariable,
+            provider.DefaultBaseUrl).TrimEnd('/');
         if (!Uri.TryCreate(baseUrlText, UriKind.Absolute, out var baseUrl) ||
             baseUrl.Scheme is not ("http" or "https"))
         {
@@ -51,8 +60,8 @@ internal sealed class TypeSafeClientSettings
 
         var model = Resolve(
             options.DefaultModel,
-            TypeSafeClient.DefaultModelEnvironmentVariable,
-            TypeSafeClient.DefaultModelName);
+            provider.DefaultModelEnvironmentVariable,
+            provider.DefaultModel).Trim();
         if (string.IsNullOrWhiteSpace(model))
         {
             throw new TypeSafeConfigurationException("DefaultModel cannot be empty.");
@@ -74,16 +83,43 @@ internal sealed class TypeSafeClientSettings
 
         var retry = (options.Retry ?? throw new TypeSafeConfigurationException("Retry cannot be null."))
             .Validate();
-        return new TypeSafeClientSettings(apiKey, baseUrl, model, options.Timeout, headers, retry);
+        return new TypeSafeClientSettings(
+            options.Provider,
+            apiKey,
+            baseUrl,
+            model,
+            provider.DecisionsPath,
+            options.Timeout,
+            headers,
+            retry);
     }
 
-    private static string ResolveApiKey(string? explicitValue)
+    private static ProviderDefaults ResolveProvider(JevProvider provider) => provider switch
     {
-        var key = Resolve(explicitValue, TypeSafeClient.ApiKeyEnvironmentVariable, string.Empty).Trim();
+        JevProvider.TypeSafe => new ProviderDefaults(
+            TypeSafeClient.ApiKeyEnvironmentVariable,
+            TypeSafeClient.BaseUrlEnvironmentVariable,
+            TypeSafeClient.DefaultModelEnvironmentVariable,
+            TypeSafeClient.DefaultBaseUrl,
+            TypeSafeClient.DefaultModelName,
+            "/v1/systemone"),
+        JevProvider.OpenRouter => new ProviderDefaults(
+            TypeSafeClient.OpenRouterApiKeyEnvironmentVariable,
+            TypeSafeClient.OpenRouterBaseUrlEnvironmentVariable,
+            TypeSafeClient.OpenRouterDefaultModelEnvironmentVariable,
+            TypeSafeClient.OpenRouterDefaultBaseUrl,
+            TypeSafeClient.OpenRouterDefaultModelName,
+            "/api/alpha/decisions"),
+        _ => throw new TypeSafeConfigurationException($"Provider '{provider}' is not supported."),
+    };
+
+    private static string ResolveApiKey(string? explicitValue, string environmentVariable)
+    {
+        var key = Resolve(explicitValue, environmentVariable, string.Empty).Trim();
         if (key.Length == 0)
         {
             throw new TypeSafeConfigurationException(
-                $"No API key was provided. Set TypeSafeClientOptions.ApiKey or {TypeSafeClient.ApiKeyEnvironmentVariable}.");
+                $"No API key was provided. Set TypeSafeClientOptions.ApiKey or {environmentVariable}.");
         }
 
         if (key.Any(character => character is < '!' or > '~'))
@@ -105,4 +141,12 @@ internal sealed class TypeSafeClientSettings
         var environmentValue = Environment.GetEnvironmentVariable(environmentVariable)?.Trim();
         return string.IsNullOrEmpty(environmentValue) ? defaultValue : environmentValue;
     }
+
+    private sealed record ProviderDefaults(
+        string ApiKeyEnvironmentVariable,
+        string BaseUrlEnvironmentVariable,
+        string DefaultModelEnvironmentVariable,
+        string DefaultBaseUrl,
+        string DefaultModel,
+        string DecisionsPath);
 }

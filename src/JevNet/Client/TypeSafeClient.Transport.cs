@@ -23,7 +23,7 @@ public sealed partial class TypeSafeClient
 
         var retry = (options?.Retry ?? _settings.Retry).Validate();
         var requestUrl = $"{_settings.BaseUrl.AbsoluteUri.TrimEnd('/')}{path}";
-        var endpoint = $"{method.Method} {requestUrl}";
+        var endpoint = $"{method.Method} {new Uri(requestUrl).GetLeftPart(UriPartial.Path)}";
 
         for (var attempt = 0; ; attempt++)
         {
@@ -122,12 +122,15 @@ public sealed partial class TypeSafeClient
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
         message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         message.Headers.TryAddWithoutValidation("User-Agent", $"JevNet/{Version}");
-        message.Headers.TryAddWithoutValidation("X-TypeSafe-SDK", $"JevNet/{Version}");
-        message.Headers.TryAddWithoutValidation("X-TypeSafe-Runtime", RuntimeInformation.FrameworkDescription);
-        if (attempt > 0)
+        if (_settings.Provider == JevProvider.TypeSafe)
         {
-            message.Headers.TryAddWithoutValidation("X-TypeSafe-Retry-Count", attempt.ToString(
-                System.Globalization.CultureInfo.InvariantCulture));
+            message.Headers.TryAddWithoutValidation("X-TypeSafe-SDK", $"JevNet/{Version}");
+            message.Headers.TryAddWithoutValidation("X-TypeSafe-Runtime", RuntimeInformation.FrameworkDescription);
+            if (attempt > 0)
+            {
+                message.Headers.TryAddWithoutValidation("X-TypeSafe-Retry-Count", attempt.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture));
+            }
         }
 
         if (payload is not null)
