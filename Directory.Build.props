@@ -8,6 +8,10 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <Authors>mathixu.dev</Authors>
     <Copyright>Copyright © 2026 mathixu.dev</Copyright>
+    <PackageProjectUrl>https://github.com/mathixu/jev-dotnet-sdk</PackageProjectUrl>
+    <PackageIcon>JevNet.png</PackageIcon>
+    <RepositoryUrl>https://github.com/mathixu/jev-dotnet-sdk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <Deterministic>true</Deterministic>
   </PropertyGroup>

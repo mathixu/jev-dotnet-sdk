@@ -4,10 +4,10 @@
     <AssemblyName>JevNet</AssemblyName>
     <RootNamespace>Jev</RootNamespace>
     <PackageId>JevNet</PackageId>
-    <VersionPrefix>0.2.0</VersionPrefix>
-    <Title>JevNet</Title>
-    <Description>An idiomatic .NET SDK for Jev through TypeSafe AI and OpenRouter.</Description>
-    <PackageTags>jev;typesafe-ai;openrouter;system-one;ai;sdk</PackageTags>
+    <VersionPrefix>0.2.1</VersionPrefix>
+    <Title>JevNet - .NET SDK for TypeSafe AI, Jev System One, and OpenRouter</Title>
+    <Description>Typed .NET client SDK for TypeSafe AI's Jev System One and OpenRouter. Build structured AI decisions, classification, routing, scoring, and probability workflows.</Description>
+    <PackageTags>jev;jevnet;typesafe-ai;openrouter;system-one;dotnet;csharp;ai;sdk;classification;routing;scoring;structured-output</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -16,9 +16,10 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReleaseNotes>See CHANGELOG.md in the repository.</PackageReleaseNotes>
+    <PackageReleaseNotes>Improved NuGet discoverability with clearer metadata, project links, a new package icon, and package-specific README documentation.</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../../assets/JevNet.png" Pack="true" PackagePath="/" />
+    <None Update="README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>

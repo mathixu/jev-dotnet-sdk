@@ -4,10 +4,10 @@
     <AssemblyName>JevNet.Extensions.DependencyInjection</AssemblyName>
     <RootNamespace>Jev</RootNamespace>
     <PackageId>JevNet.Extensions.DependencyInjection</PackageId>
-    <VersionPrefix>0.2.0</VersionPrefix>
-    <Title>JevNet dependency injection extensions</Title>
-    <Description>Microsoft.Extensions.DependencyInjection integration for JevNet.</Description>
-    <PackageTags>jev;typesafe-ai;dependency-injection;httpclient</PackageTags>
+    <VersionPrefix>0.2.1</VersionPrefix>
+    <Title>JevNet Dependency Injection</Title>
+    <Description>.NET dependency injection for JevNet, the typed TypeSafe AI, Jev System One, and OpenRouter SDK.</Description>
+    <PackageTags>jev;jevnet;typesafe-ai;openrouter;dotnet;dependency-injection;httpclient;ai;sdk</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -16,13 +16,14 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReleaseNotes>See CHANGELOG.md in the repository.</PackageReleaseNotes>
+    <PackageReleaseNotes>Improved NuGet discoverability with clearer metadata, project links, a new package icon, and package-specific README documentation.</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" />
     <ProjectReference Include="../JevNet/JevNet.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../../assets/JevNet.png" Pack="true" PackagePath="/" />
+    <None Update="README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>
