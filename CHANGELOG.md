@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-24
+
+### Changed
+
+- Improved the titles, descriptions, and search tags of both NuGet packages.
+- Added explicit project and repository links to the package metadata.
+- Added a shared package icon and package-specific NuGet README documentation.
+
 ## [0.2.0] - 2026-09-23
 
 ### Added
@@ -24,6 +32,7 @@ All notable changes to this project are documented in this file. The format foll
 - Optional `Microsoft.Extensions.DependencyInjection` integration.
 - Offline parity coverage against the official JavaScript and Python SDKs.
 
-[Unreleased]: https://github.com/mathixu/jev-dotnet-sdk/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/mathixu/jev-dotnet-sdk/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/mathixu/jev-dotnet-sdk/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mathixu/jev-dotnet-sdk/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mathixu/jev-dotnet-sdk/releases/tag/v0.1.0
